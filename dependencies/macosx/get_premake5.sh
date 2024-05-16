@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 if [[ -z "${DEPENDENCIES}" ]]; then
     echo "DEPENDENCIES env variable must be set. This script is usually called by other scripts."

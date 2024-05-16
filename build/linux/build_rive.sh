@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 source ../../dependencies/linux/config_directories.sh

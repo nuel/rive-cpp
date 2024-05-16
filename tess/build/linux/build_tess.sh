@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 source ../../../dependencies/linux/config_directories.sh
@@ -55,7 +55,7 @@ for var in "$@"; do
 done
 
 # compile shaders
-$DEPENDENCIES/bin/sokol-shdc --input ../src/sokol/shader.glsl --output ../src/sokol/generated/shader.h --slang glsl330:hlsl5:metal_macos:metal_ios:metal_sim:glsl300es:glsl100
+$DEPENDENCIES/bin/sokol-shdc --input ../src/sokol/shader.glsl --output ../src/sokol/generated/shader.h --slang glsl300es
 
 make config=$CONFIG -j4
 
