@@ -1,3 +1,6 @@
+// clang-format off
+// clang-format doesn't handle the '@' directives.
+
 @ctype mat4 rive::Mat4
 @ctype vec2 rive::Vec2D
 
@@ -18,13 +21,14 @@ void main() {
 @end
 
 @fs fs
-uniform sampler2D tex;
+uniform sampler _sampler;
+uniform texture2D tex;
 
 in vec2 uv;
 out vec4 frag_color;
 
 void main() {
-    frag_color = texture(tex, uv);
+    frag_color = texture(sampler2D(tex, _sampler), uv);
 }
 @end
 

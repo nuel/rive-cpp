@@ -87,6 +87,7 @@
 #include "rive/draw_rules.hpp"
 #include "rive/draw_target.hpp"
 #include "rive/drawable.hpp"
+#include "rive/joystick.hpp"
 #include "rive/nested_animation.hpp"
 #include "rive/nested_artboard.hpp"
 #include "rive/node.hpp"
@@ -285,6 +286,8 @@ public:
                 return new DrawRules();
             case ArtboardBase::typeKey:
                 return new Artboard();
+            case JoystickBase::typeKey:
+                return new Joystick();
             case BackboardBase::typeKey:
                 return new Backboard();
             case WeightBase::typeKey:
@@ -454,6 +457,12 @@ public:
             case StateTransitionBase::exitTimePropertyKey:
                 object->as<StateTransitionBase>()->exitTime(value);
                 break;
+            case StateTransitionBase::interpolationTypePropertyKey:
+                object->as<StateTransitionBase>()->interpolationType(value);
+                break;
+            case StateTransitionBase::interpolatorIdPropertyKey:
+                object->as<StateTransitionBase>()->interpolatorId(value);
+                break;
             case LinearAnimationBase::fpsPropertyKey:
                 object->as<LinearAnimationBase>()->fps(value);
                 break;
@@ -507,6 +516,18 @@ public:
                 break;
             case ArtboardBase::defaultStateMachineIdPropertyKey:
                 object->as<ArtboardBase>()->defaultStateMachineId(value);
+                break;
+            case JoystickBase::xIdPropertyKey:
+                object->as<JoystickBase>()->xId(value);
+                break;
+            case JoystickBase::yIdPropertyKey:
+                object->as<JoystickBase>()->yId(value);
+                break;
+            case JoystickBase::joystickFlagsPropertyKey:
+                object->as<JoystickBase>()->joystickFlags(value);
+                break;
+            case JoystickBase::handleSourceIdPropertyKey:
+                object->as<JoystickBase>()->handleSourceId(value);
                 break;
             case WeightBase::valuesPropertyKey:
                 object->as<WeightBase>()->values(value);
@@ -766,6 +787,30 @@ public:
             case ArtboardBase::originYPropertyKey:
                 object->as<ArtboardBase>()->originY(value);
                 break;
+            case JoystickBase::xPropertyKey:
+                object->as<JoystickBase>()->x(value);
+                break;
+            case JoystickBase::yPropertyKey:
+                object->as<JoystickBase>()->y(value);
+                break;
+            case JoystickBase::posXPropertyKey:
+                object->as<JoystickBase>()->posX(value);
+                break;
+            case JoystickBase::posYPropertyKey:
+                object->as<JoystickBase>()->posY(value);
+                break;
+            case JoystickBase::originXPropertyKey:
+                object->as<JoystickBase>()->originX(value);
+                break;
+            case JoystickBase::originYPropertyKey:
+                object->as<JoystickBase>()->originY(value);
+                break;
+            case JoystickBase::widthPropertyKey:
+                object->as<JoystickBase>()->width(value);
+                break;
+            case JoystickBase::heightPropertyKey:
+                object->as<JoystickBase>()->height(value);
+                break;
             case BoneBase::lengthPropertyKey:
                 object->as<BoneBase>()->length(value);
                 break;
@@ -1004,6 +1049,10 @@ public:
                 return object->as<StateTransitionBase>()->duration();
             case StateTransitionBase::exitTimePropertyKey:
                 return object->as<StateTransitionBase>()->exitTime();
+            case StateTransitionBase::interpolationTypePropertyKey:
+                return object->as<StateTransitionBase>()->interpolationType();
+            case StateTransitionBase::interpolatorIdPropertyKey:
+                return object->as<StateTransitionBase>()->interpolatorId();
             case LinearAnimationBase::fpsPropertyKey:
                 return object->as<LinearAnimationBase>()->fps();
             case LinearAnimationBase::durationPropertyKey:
@@ -1040,6 +1089,14 @@ public:
                 return object->as<DrawRulesBase>()->drawTargetId();
             case ArtboardBase::defaultStateMachineIdPropertyKey:
                 return object->as<ArtboardBase>()->defaultStateMachineId();
+            case JoystickBase::xIdPropertyKey:
+                return object->as<JoystickBase>()->xId();
+            case JoystickBase::yIdPropertyKey:
+                return object->as<JoystickBase>()->yId();
+            case JoystickBase::joystickFlagsPropertyKey:
+                return object->as<JoystickBase>()->joystickFlags();
+            case JoystickBase::handleSourceIdPropertyKey:
+                return object->as<JoystickBase>()->handleSourceId();
             case WeightBase::valuesPropertyKey:
                 return object->as<WeightBase>()->values();
             case WeightBase::indicesPropertyKey:
@@ -1215,6 +1272,22 @@ public:
                 return object->as<ArtboardBase>()->originX();
             case ArtboardBase::originYPropertyKey:
                 return object->as<ArtboardBase>()->originY();
+            case JoystickBase::xPropertyKey:
+                return object->as<JoystickBase>()->x();
+            case JoystickBase::yPropertyKey:
+                return object->as<JoystickBase>()->y();
+            case JoystickBase::posXPropertyKey:
+                return object->as<JoystickBase>()->posX();
+            case JoystickBase::posYPropertyKey:
+                return object->as<JoystickBase>()->posY();
+            case JoystickBase::originXPropertyKey:
+                return object->as<JoystickBase>()->originX();
+            case JoystickBase::originYPropertyKey:
+                return object->as<JoystickBase>()->originY();
+            case JoystickBase::widthPropertyKey:
+                return object->as<JoystickBase>()->width();
+            case JoystickBase::heightPropertyKey:
+                return object->as<JoystickBase>()->height();
             case BoneBase::lengthPropertyKey:
                 return object->as<BoneBase>()->length();
             case RootBoneBase::xPropertyKey:
@@ -1365,6 +1438,8 @@ public:
             case StateTransitionBase::flagsPropertyKey:
             case StateTransitionBase::durationPropertyKey:
             case StateTransitionBase::exitTimePropertyKey:
+            case StateTransitionBase::interpolationTypePropertyKey:
+            case StateTransitionBase::interpolatorIdPropertyKey:
             case LinearAnimationBase::fpsPropertyKey:
             case LinearAnimationBase::durationPropertyKey:
             case LinearAnimationBase::loopValuePropertyKey:
@@ -1383,6 +1458,10 @@ public:
             case ImageBase::assetIdPropertyKey:
             case DrawRulesBase::drawTargetIdPropertyKey:
             case ArtboardBase::defaultStateMachineIdPropertyKey:
+            case JoystickBase::xIdPropertyKey:
+            case JoystickBase::yIdPropertyKey:
+            case JoystickBase::joystickFlagsPropertyKey:
+            case JoystickBase::handleSourceIdPropertyKey:
             case WeightBase::valuesPropertyKey:
             case WeightBase::indicesPropertyKey:
             case TendonBase::boneIdPropertyKey:
@@ -1468,6 +1547,14 @@ public:
             case ArtboardBase::yPropertyKey:
             case ArtboardBase::originXPropertyKey:
             case ArtboardBase::originYPropertyKey:
+            case JoystickBase::xPropertyKey:
+            case JoystickBase::yPropertyKey:
+            case JoystickBase::posXPropertyKey:
+            case JoystickBase::posYPropertyKey:
+            case JoystickBase::originXPropertyKey:
+            case JoystickBase::originYPropertyKey:
+            case JoystickBase::widthPropertyKey:
+            case JoystickBase::heightPropertyKey:
             case BoneBase::lengthPropertyKey:
             case RootBoneBase::xPropertyKey:
             case RootBoneBase::yPropertyKey:

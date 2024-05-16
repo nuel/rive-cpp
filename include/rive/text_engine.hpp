@@ -99,10 +99,7 @@ public:
 
     const LineMetrics& lineMetrics() const { return m_LineMetrics; }
 
-    // This is experimental
-    // -- may only be needed by Editor
-    // -- so it may be removed from here later
-    //
+    // Variable axis available for the font.
     struct Axis
     {
         uint32_t tag;
@@ -111,30 +108,49 @@ public:
         float max;
     };
 
-    // Returns the canonical set of Axes for this font. Use this to know
-    // what variations are possible. If you want to know the specific
-    // coordinate within that variations space for *this* font, call
-    // getCoords().
-    //
-    std::vector<Axis> getAxes() const;
-    virtual Axis getAxis(uint16_t index) const = 0;
-    virtual uint16_t getAxisCount() const = 0;
-
+    // Variable axis setting.
     struct Coord
     {
         uint32_t axis;
         float value;
     };
 
-    // Returns the specific coords in variation space for this font.
-    // If you want to have a description of the entire variation space,
-    // call getAxes().
-    //
-    virtual std::vector<Coord> getCoords() const = 0;
+    // Returns the count of variable axes available for this font.
+    virtual uint16_t getAxisCount() const = 0;
 
-    virtual rcp<Font> makeAtCoords(Span<const Coord>) const = 0;
+    // Returns the definition of the Axis at the provided index.
+    virtual Axis getAxis(uint16_t index) const = 0;
+
+    // Value for the axis, if a Coord has been provided the value from the Coord
+    // will be used. Otherwise the default value for the axis will be returned.
+    virtual float getAxisValue(uint32_t axisTag) const = 0;
+
+    // Font feature.
+    struct Feature
+    {
+        uint32_t tag;
+        uint32_t value;
+    };
+
+    // Returns the features available for this font.
+    virtual SimpleArray<uint32_t> features() const = 0;
+
+    virtual bool hasGlyph(rive::Span<const rive::Unichar>) const = 0;
+
+    // Value for the feature, if no value has been provided a (uint32_t)-1 is
+    // returned to signal that the text engine will pick the best feature value
+    // for the content.
+    virtual uint32_t getFeatureValue(uint32_t featureTag) const = 0;
+
+    rcp<Font> makeAtCoords(Span<const Coord> coords) const
+    {
+        return withOptions(coords, Span<const Feature>(nullptr, 0));
+    }
 
     rcp<Font> makeAtCoord(Coord c) { return this->makeAtCoords(Span<const Coord>(&c, 1)); }
+
+    virtual rcp<Font> withOptions(Span<const Coord> variableAxes,
+                                  Span<const Feature> features) const = 0;
 
     // Returns a 1-point path for this glyph. It will be positioned
     // relative to (0,0) with the typographic baseline at y = 0.
@@ -142,6 +158,14 @@ public:
     virtual RawPath getPath(GlyphID) const = 0;
 
     SimpleArray<Paragraph> shapeText(Span<const Unichar> text, Span<const TextRun> runs) const;
+
+    // If the platform can supply fallback font(s), set this function pointer.
+    // It will be called with a span of unichars, and the platform attempts to
+    // return a font that can draw (at least some of) them. If no font is available
+    // just return nullptr.
+
+    using FallbackProc = rive::rcp<rive::Font> (*)(rive::Span<const rive::Unichar>);
+    static FallbackProc gFallbackProc;
 
 protected:
     Font(const LineMetrics& lm) : m_LineMetrics(lm) {}
@@ -170,14 +194,19 @@ struct TextRun
 struct GlyphRun
 {
     GlyphRun(size_t glyphCount = 0) :
-        glyphs(glyphCount), textIndices(glyphCount), advances(glyphCount), xpos(glyphCount + 1)
+        glyphs(glyphCount),
+        textIndices(glyphCount),
+        advances(glyphCount),
+        xpos(glyphCount + 1),
+        offsets(glyphCount)
     {}
 
     GlyphRun(SimpleArray<GlyphID> glyphIds,
              SimpleArray<uint32_t> offsets,
              SimpleArray<float> ws,
-             SimpleArray<float> xs) :
-        glyphs(glyphIds), textIndices(offsets), advances(ws), xpos(xs)
+             SimpleArray<float> xs,
+             SimpleArray<rive::Vec2D> offs) :
+        glyphs(glyphIds), textIndices(offsets), advances(ws), xpos(xs), offsets(offs)
     {}
 
     rcp<Font> font;
@@ -198,6 +227,9 @@ struct GlyphRun
     // X position of each glyph, with an extra value at the end for the right most extent of the
     // last glyph.
     SimpleArray<float> xpos;
+
+    // X and Y offset each glyphs draws at relative to its baseline and advance position.
+    SimpleArray<rive::Vec2D> offsets;
 
     // List of possible indices to line break at. Has a stride of 2 uint32_ts where each pair marks
     // the start and end of a word, with the exception of a return character (forced linebreak)

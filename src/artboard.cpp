@@ -15,7 +15,9 @@
 #include "rive/importers/import_stack.hpp"
 #include "rive/importers/backboard_importer.hpp"
 #include "rive/nested_artboard.hpp"
+#include "rive/joystick.hpp"
 #include "rive/animation/state_machine_instance.hpp"
+#include "rive/shapes/shape.hpp"
 
 #include <stack>
 #include <unordered_map>
@@ -146,6 +148,17 @@ StatusCode Artboard::initialize()
             case NestedArtboardBase::typeKey:
                 m_NestedArtboards.push_back(object->as<NestedArtboard>());
                 break;
+
+            case JoystickBase::typeKey:
+            {
+                Joystick* joystick = object->as<Joystick>();
+                if (!joystick->canApplyBeforeUpdate())
+                {
+                    m_JoysticksApplyBeforeUpdate = false;
+                }
+                m_Joysticks.push_back(joystick);
+                break;
+            }
         }
     }
 
@@ -355,11 +368,6 @@ void Artboard::addAnimation(LinearAnimation* object) { m_Animations.push_back(ob
 
 void Artboard::addStateMachine(StateMachine* object) { m_StateMachines.push_back(object); }
 
-void Artboard::addNestedArtboard(NestedArtboard* artboard)
-{
-    m_NestedArtboards.push_back(artboard);
-}
-
 Core* Artboard::resolve(uint32_t id) const
 {
     if (id >= static_cast<int>(m_Objects.size()))
@@ -452,9 +460,6 @@ bool Artboard::updateComponents()
                 // re-run the update.
                 if (m_DirtDepth < i)
                 {
-                    // We put this in here just to know if we need to
-                    // keep this around...
-                    assert(false);
                     break;
                 }
             }
@@ -467,7 +472,33 @@ bool Artboard::updateComponents()
 
 bool Artboard::advance(double elapsedSeconds)
 {
+    if (m_JoysticksApplyBeforeUpdate)
+    {
+        for (auto joystick : m_Joysticks)
+        {
+            joystick->apply(this);
+        }
+    }
+
     bool didUpdate = updateComponents();
+    if (!m_JoysticksApplyBeforeUpdate)
+    {
+        for (auto joystick : m_Joysticks)
+        {
+            if (!joystick->canApplyBeforeUpdate())
+            {
+                if (updateComponents())
+                {
+                    didUpdate = true;
+                }
+            }
+            joystick->apply(this);
+        }
+        if (updateComponents())
+        {
+            didUpdate = true;
+        }
+    }
     for (auto nestedArtboard : m_NestedArtboards)
     {
         if (nestedArtboard->advance((float)elapsedSeconds))
@@ -556,7 +587,25 @@ void Artboard::draw(Renderer* renderer, DrawOption option)
     renderer->restore();
 }
 
-AABB Artboard::bounds() const { return AABB(0.0f, 0.0f, width(), height()); }
+void Artboard::addToRenderPath(RenderPath* path, const Mat2D& transform)
+{
+    for (auto drawable = m_FirstDrawable; drawable != nullptr; drawable = drawable->prev)
+    {
+        if (drawable->isHidden() || !drawable->is<Shape>())
+        {
+            continue;
+        }
+        Shape* shape = drawable->as<Shape>();
+        shape->addToRenderPath(path, transform);
+    }
+}
+
+AABB Artboard::bounds() const
+{
+    return m_FrameOrigin
+               ? AABB(0.0f, 0.0f, width(), height())
+               : AABB::fromLTWH(-width() * originX(), -height() * originY(), width(), height());
+}
 
 bool Artboard::isTranslucent(const LinearAnimation* anim) const
 {
@@ -656,46 +705,46 @@ int Artboard::defaultStateMachineIndex() const
     return index;
 }
 
-std::unique_ptr<ArtboardInstance> Artboard::instance() const
-{
-    std::unique_ptr<ArtboardInstance> artboardClone(new ArtboardInstance);
-    artboardClone->copy(*this);
+// std::unique_ptr<ArtboardInstance> Artboard::instance() const
+// {
+//     std::unique_ptr<ArtboardInstance> artboardClone(new ArtboardInstance);
+//     artboardClone->copy(*this);
 
-    artboardClone->m_Factory = m_Factory;
-    artboardClone->m_FrameOrigin = m_FrameOrigin;
-    artboardClone->m_IsInstance = true;
+//     artboardClone->m_Factory = m_Factory;
+//     artboardClone->m_FrameOrigin = m_FrameOrigin;
+//     artboardClone->m_IsInstance = true;
 
-    std::vector<Core*>& cloneObjects = artboardClone->m_Objects;
-    cloneObjects.push_back(artboardClone.get());
+//     std::vector<Core*>& cloneObjects = artboardClone->m_Objects;
+//     cloneObjects.push_back(artboardClone.get());
 
-    if (!m_Objects.empty())
-    {
-        // Skip first object (artboard).
-        auto itr = m_Objects.begin();
-        while (++itr != m_Objects.end())
-        {
-            auto object = *itr;
-            cloneObjects.push_back(object == nullptr ? nullptr : object->clone());
-        }
-    }
+//     if (!m_Objects.empty())
+//     {
+//         // Skip first object (artboard).
+//         auto itr = m_Objects.begin();
+//         while (++itr != m_Objects.end())
+//         {
+//             auto object = *itr;
+//             cloneObjects.push_back(object == nullptr ? nullptr : object->clone());
+//         }
+//     }
 
-    for (auto animation : m_Animations)
-    {
-        artboardClone->m_Animations.push_back(animation);
-    }
-    for (auto stateMachine : m_StateMachines)
-    {
-        artboardClone->m_StateMachines.push_back(stateMachine);
-    }
+//     for (auto animation : m_Animations)
+//     {
+//         artboardClone->m_Animations.push_back(animation);
+//     }
+//     for (auto stateMachine : m_StateMachines)
+//     {
+//         artboardClone->m_StateMachines.push_back(stateMachine);
+//     }
 
-    if (artboardClone->initialize() != StatusCode::Ok)
-    {
-        artboardClone = nullptr;
-    }
+//     if (artboardClone->initialize() != StatusCode::Ok)
+//     {
+//         artboardClone = nullptr;
+//     }
 
-    assert(artboardClone->isInstance());
-    return artboardClone;
-}
+//     assert(artboardClone->isInstance());
+//     return artboardClone;
+// }
 
 void Artboard::frameOrigin(bool value)
 {
